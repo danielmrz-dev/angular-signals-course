@@ -14,7 +14,7 @@ import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { CoursesCardListComponent } from '../courses-card-list/courses-card-list.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MessagesService } from '../messages/messages.service';
-import { catchError, from, throwError } from 'rxjs';
+import { catchError, from, interval, startWith, throwError } from 'rxjs';
 import {
 	toObservable,
 	toSignal,
@@ -39,6 +39,8 @@ export class HomeComponent {
   
 	#courses = signal<Course[]>([]);
 
+  $courses = toObservable(this.#courses);
+
 	beginnerCourses = computed(() => {
 		const courses = this.#courses();
 		return courses.filter((course) => course.category === 'BEGINNER');
@@ -55,8 +57,37 @@ export class HomeComponent {
 	dialog = inject(MatDialog);
 
 	constructor() {
+
+    this.$courses.subscribe((courses) => {
+      console.log(courses);
+      
+    })
+
 		this.loadCourses();
 	}
+
+  injector = inject(Injector);
+
+  courses$ = from(this.coursesService.loadAllCourses());
+
+  onToSignalExample() {
+    try {
+      const courses$ = from(this.coursesService.loadAllCourses()).pipe(
+        catchError((error) => {
+          throw error;
+        })
+      );
+      const courses = toSignal(courses$, {
+        injector: this.injector
+      })
+      effect(() => {
+        console.log("Number => ", courses());
+      }, { injector: this.injector })
+    } catch (err) {
+      console.log(err);      
+    }
+
+  }
 
 	async loadCourses() {
 		try {
